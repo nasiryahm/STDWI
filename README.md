@@ -3,7 +3,7 @@
 Implementation of a spike timing-dependent weight Inference (STDWI) method and competitors -- all of which are proposed as biologically plausible methods to solve the weight transport problem for the backpropagation of error algorithm.
 
 In this repository we have our implementation of the STDWI method, the regression discontinuity design (RDD) method by Guerguiev et al. and a modified rate-based method by Akrout et al.
-See [Example.ipynb](./Example.ipynb)) for a walkthrough of simulating a feedforward network of leaky integrate and fire neurons and inference of the synaptic weights using these techniques.
+See [Example.ipynb](./Example.ipynb) for a walkthrough of simulating a feedforward network of leaky integrate and fire neurons and inference of the synaptic weights using these techniques.
 
 The scripts used to produce plots shown in our [arXiv pre-print](http://arxiv.org/abs/2003.03988) are located in the [paper_scripts](./paper_scripts/) folder.
 
