@@ -15,7 +15,9 @@ reset = 0.0
 simulation_length = 250*1e3
 nb_timesteps = int(simulation_length / timestep)
 
-for seed in np.arange(1,11):
+seeds = [1] # np.arange(1,11)
+
+for seed in seeds:
     print("---- Beginning with Seed: " + str(seed) + " ----")
     # Trials are a synonym for the different weights of pre-synaptic 
     nb_trials = 501
@@ -59,10 +61,3 @@ for seed in np.arange(1,11):
         output_spike_trains[trial].tofile(path + str(trial) + "_output_spike_trains.npy")
     print("---- Weights and Spike Times Dumped----")
 
-    ## Create a plot of some of the trajectories and save (just for future)
-    #plt.plot(membrane_voltages[:10,:int(500/timestep)].transpose())
-    #plt.xlabel("Time (0.1 ms)")
-    #plt.ylabel("Normalized Voltage")
-    #plt.savefig(path + 'ExampleTrajectories.png', bbox_inches='tight')
-    #plt.clf()
-    #print("---- Figures and Files Dumped ----")
