@@ -84,17 +84,16 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
     nb_resamples = int(simulation_time // resample_period)
     nb_neurons = len(spike_trains)
 
-    for s_indx in range(nb_resamples):
-        r = np.random.RandomState(s_indx + 1)
-        off_neurons = r.choice(
-            nb_neurons,
-            int((1.0 - ratio_active) * nb_neurons),
+    for n_indx in range(nb_neurons):
+        r = np.random.RandomState(n_indx + 1)
+        off_periods = r.choice(
+            nb_resamples,
+            int((1.0 - ratio_active) * nb_resamples),
             replace=False)
-        for n_indx in off_neurons:
+        for s_indx in off_periods:
             mask = (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
             spike_trains[n_indx][mask] = -1
 
-    for n_indx in range(nb_neurons):
         spike_trains[n_indx] = spike_trains[n_indx][spike_trains[n_indx] >= 0.0]
 
     return spike_trains
@@ -179,8 +178,10 @@ def lif_dynamics(xpsps, weight_matrix, timestep, tau=20.0, thresh=1.0, rest=0.0,
     mem_voltage = np.zeros((nb_post_neurons, nb_timesteps))
     acc_voltage = np.zeros(mem_voltage.shape)
     spike_times = [[] for p in range(nb_post_neurons)]
+    timestep_inputs = np.einsum('ij, jn->in', weight_matrix, xpsps)
+
     for t_indx in np.arange(1, nb_timesteps):
-        total_input = np.matmul(weight_matrix, xpsps[:, t_indx - 1])
+        total_input = timestep_inputs[:, t_indx - 1]
         # Membrane voltage update
         dmem = ((rest + drift) - mem_voltage[:, t_indx - 1]) + coupling_ratio*(total_input - mem_voltage[:, t_indx - 1])
         mem_voltage[:, t_indx] = mem_voltage[:, t_indx - 1] + (timestep / tau) * dmem

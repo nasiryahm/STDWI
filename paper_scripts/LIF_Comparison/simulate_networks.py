@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from shutil import copyfile
+import time
 
 import sys
 sys.path.append("../..")
@@ -25,6 +26,8 @@ seeds = [1]
 print("---- Ratio Stimulated: " + str(ratio_input_neurons_stimulated) + " ----")
 for seed in seeds:
     print("---- Beginning Simulation with Seed " + str(seed) + " ----")
+    
+    start_time = time.time()
     # Producing Stimulation for the whole length of time
     stimulation_spike_trains = simulator.poisson_spike_train(
         num_input_neurons,
@@ -32,13 +35,16 @@ for seed in seeds:
         sim_time,
         timestep,
         seed=seed)
-    print("---- Stimulation Spike Trains Simulated ----")
+    print("---- Stimulation Spike Trains Simulated ---- Time: " + str(time.time() - start_time))
+    start_time = time.time()
 
     # In reality, we want only some perc of neurons firing at a time
     simulator.random_sample_spike_train(stimulation_spike_trains,
                                         sim_time, timestep,
                                         stimulus_length, ratio_input_neurons_stimulated)
-    print("---- Stimuli Separated in Spike Times ----")
+    print("---- Stimuli Separated in Spike Times ---- Time: ", time.time() - start_time)
+    start_time = time.time()
+
 
     """
     for i in range(num_input_neurons):
@@ -52,7 +58,8 @@ for seed in seeds:
         stimulation_spike_trains,
         sim_time,
         timestep)
-    print("---- Stimulation XPSPs Produced ----")
+    print("---- Stimulation XPSPs Produced ---- Time: " + str(time.time() - start_time))
+    start_time = time.time()
 
     """
     plt.plot(stimulation_xpsps[0,0:4000])
@@ -78,7 +85,8 @@ for seed in seeds:
         input_neuron_xpsps, io_weights, timestep)
     output_neuron_xpsps = simulator.spike_trains_to_xpsps(
         output_neuron_spiketimes, sim_time, timestep)
-    print("---- Network Dynamics Simulated ----")
+    print("---- Network Dynamics Simulated ---- Time: " + str(time.time() - start_time))
+    start_time = time.time()
 
     input_firing_rates = simulator.firing_rates(input_neuron_spiketimes, sim_time)
     output_firing_rates = simulator.firing_rates(output_neuron_spiketimes, sim_time)
