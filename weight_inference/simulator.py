@@ -40,8 +40,9 @@ def poisson_spike_train(num_neurons, firing_rate, simulation_time, timestep, see
 
         r = np.random.RandomState(seed + n_indx + 1)
         nth_train = - np.cumsum((1.0 / firing_rate) * np.log(r.rand(2 * avg_num_spikes)))
+        nth_train = nth_train[nth_train < (simulation_time - timestep)]
 
-        spike_trains.append(np.where(nth_train < (simulation_time - timestep))[0])
+        spike_trains.append((nth_train / timestep).astype(int))
     return spike_trains
 
 
