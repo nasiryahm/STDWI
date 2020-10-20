@@ -40,9 +40,8 @@ def poisson_spike_train(num_neurons, firing_rate, simulation_time, timestep, see
 
         r = np.random.RandomState(seed + n_indx + 1)
         nth_train = - np.cumsum((1.0 / firing_rate) * np.log(r.rand(2 * avg_num_spikes)))
-        nth_train = nth_train[nth_train < (simulation_time - timestep)]
 
-        spike_trains.append(nth_train)
+        spike_trains.append(np.where(nth_train < (simulation_time - timestep))[0])
     return spike_trains
 
 
@@ -59,8 +58,8 @@ def clip_spike_trains(spike_trains, max_time, min_time=0.0):
     """
     clipped_spike_trains = list()
     for train in spike_trains:
-        mask = train > min_time
-        mask = mask & (train < max_time)
+        mask = train > (min_time / timestep)
+        mask = mask & (train < (max_time / timestep))
         clipped_spike_trains.append(train[mask])
 
     return clipped_spike_trains
@@ -83,6 +82,7 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
     """
     nb_resamples = int(simulation_time // resample_period)
     nb_neurons = len(spike_trains)
+    resample_period = int(resample_period / timestep)
 
     for n_indx in range(nb_neurons):
         r = np.random.RandomState(n_indx + 1)
@@ -99,6 +99,7 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
     return spike_trains
 
 
+
 def xpsp_filterer(train, nb_timesteps, timestep, tau_slow, tau_fast):
     """Convolves a spike train with a double exponential causal XPSP filter
 
@@ -113,8 +114,7 @@ def xpsp_filterer(train, nb_timesteps, timestep, tau_slow, tau_fast):
         xpsps (1D numpy array): the post synaptic potential for each timesteps
     """
     xpsp = np.zeros((nb_timesteps))
-    spiketrain_indices = np.round(train / timestep).astype(int)
-    xpsp[spiketrain_indices] += 1.0 / (tau_slow - tau_fast)
+    xpsp[train] += 1.0 / (tau_slow - tau_fast)
 
 
     window_size = int(7*(tau_slow / timestep))
@@ -127,7 +127,6 @@ def xpsp_filterer(train, nb_timesteps, timestep, tau_slow, tau_fast):
     slow_xpsp = np.convolve(xpsp, slow_filter)[:-(window_size - 1)]
 
     return slow_xpsp - fast_xpsp
-
 
 def spike_trains_to_xpsps(spike_trains, sim_time, timestep, tau_slow=10.0, tau_fast=3.0):
     """Converts a list of spike trains into a 2D numpy array of post-synaptic potentials
@@ -193,7 +192,7 @@ def lif_dynamics(xpsps, weight_matrix, timestep, tau=20.0, thresh=1.0, rest=0.0,
         # Storing spikes
         spiked_neurons = np.where(mask)[0]
         for s in spiked_neurons:
-            spike_times[s].append(t_indx * timestep)
+            spike_times[s].append(t_indx)
 
     for n in range(nb_post_neurons):
         spike_times[n] = np.asarray(spike_times[n])
