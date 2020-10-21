@@ -78,6 +78,8 @@ for seed in seeds:
     # Using input stimulation XPSPs and weight matrices to simulate network dynamics
     input_neuron_acc, input_neuron_mem, input_neuron_spiketimes = simulator.lif_dynamics(
         stimulation_xpsps, stim_weights, timestep)
+    print("---- Input Network Dynamics Simulated ---- Time: " + str(time.time() - start_time))
+    start_time = time.time()
     input_neuron_xpsps = simulator.spike_trains_to_xpsps(
         input_neuron_spiketimes, sim_time, timestep)
 

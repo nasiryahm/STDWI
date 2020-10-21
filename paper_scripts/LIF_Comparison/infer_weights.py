@@ -32,12 +32,12 @@ for seed in seeds:
 
     input_neuron_spiketimes = []
     for i_indx in range(num_input_neurons):
-        train = np.fromfile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
+        train = timestep*np.fromfile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
         input_neuron_spiketimes.append(train)
 
     output_neuron_spiketimes = []
     for o_indx in range(num_output_neurons):
-        train = np.fromfile(path + str(o_indx) + "_output_neuron_spiketimes.npy")
+        train = timestep*np.fromfile(path + str(o_indx) + "_output_neuron_spiketimes.npy")
         output_neuron_spiketimes.append(train)
     print("---- Spiking Data Loaded ----")
 
@@ -54,7 +54,7 @@ for seed in seeds:
     num_stimuli = int(simulation_time / stimulus_length)
 
     # Fitting weights with the Akrout method
-    batch_sizes = [1000]  # [10,100,1000]
+    batch_sizes = [] #[1000]  # [10,100,1000]
     for batch_size in batch_sizes:
         akrout_guess_dumps = fitter.akrout(
             initial_guess_matrix,
@@ -91,8 +91,8 @@ for seed in seeds:
             print("---- STDWI Method Complete, Fast Tau: " + str(t_fast) + ", Slow Tau: " + str(t_slow) + " ----")
 
     # Fitting weights with the RDD method
-    alphas = [0.025]  # [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
-    windows = [35]  # [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
+    alphas = [] #[0.025]  # [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
+    windows = [] #[35]  # [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
     for alpha in alphas:
         for window in windows:
             window_size = np.round(window / timestep).astype(int)  # The window about events (30ms)
