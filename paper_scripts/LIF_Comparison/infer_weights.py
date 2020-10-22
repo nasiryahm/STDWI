@@ -32,12 +32,12 @@ for seed in seeds:
 
     input_neuron_spiketimes = []
     for i_indx in range(num_input_neurons):
-        train = timestep*np.fromfile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
+        train = timestep*np.fromfile(path + str(i_indx) + "_input_neuron_spiketimes.npy", dtype=int)
         input_neuron_spiketimes.append(train)
 
     output_neuron_spiketimes = []
     for o_indx in range(num_output_neurons):
-        train = timestep*np.fromfile(path + str(o_indx) + "_output_neuron_spiketimes.npy")
+        train = timestep*np.fromfile(path + str(o_indx) + "_output_neuron_spiketimes.npy", dtype=int)
         output_neuron_spiketimes.append(train)
     print("---- Spiking Data Loaded ----")
 
