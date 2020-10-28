@@ -64,7 +64,7 @@ def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simula
         spike_trains (list, np arrays): spike times over the simulation time per neuron (ms)
     """
     nb_timesteps = int(simulation_time / timestep)
-    firing_rate_adjusted = firing_rate / timestep # Converting to spikes/timestep
+    firing_rate_adjusted = firing_rate * timestep # Converting to spikes/timestep
 
     # Creating a global spike train which all other spikes will correlate 
     r = np.random.RandomState(seed)
@@ -74,10 +74,9 @@ def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simula
     for n_indx in range(num_neurons):
         r = np.random.RandomState(seed + 2 + n_indx)
 
-        neuron_spiketrain = (1.0 - correlation)*r.rand(nb_timesteps) < firing_rate_adjusted
+        neuron_spiketrain = r.rand(nb_timesteps) < (1.0 - correlation)*firing_rate_adjusted
         correlate_steps = r.rand(nb_timesteps) < correlation
-
-        neuron_spiketrain[correlate_steps] = global_correlating_spiketrain[correlate_steps]
+        neuron_spiketrain[global_correlating_spiketrain & correlate_steps] = 1
 
         spike_trains.append(np.where(neuron_spiketrain)[0])
     return spike_trains
