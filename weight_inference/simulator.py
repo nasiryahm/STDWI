@@ -46,6 +46,43 @@ def poisson_spike_train(num_neurons, firing_rate, simulation_time, timestep, see
     return spike_trains
 
 
+def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simulation_time, timestep, seed=42):
+    """Produces a set of Poisson process sampled spikes with a thinning process to achieve correlation
+
+    This function creates the desired firing rate as a threshold and draws random numbers (tested against this threshold) to determine spikes.
+    This is augmented with a shared random process to determine when neurons should share their activity with some global correlated spike-set.
+    Code from brian2 issues was helpful: https://github.com/brian-team/brian2/issues/717
+
+    Args:
+        num_neurons (int): the number of neurons to simulate
+        firing_rate (float): the firing rate to simulate for these neurons (spikes/ms)
+        correlation (int): the within-group correlation
+        simulation_time (float): the number of ms of simulation time (ms)
+        timestep (float): the simulation timestepping (ms)
+
+    Returns:
+        spike_trains (list, np arrays): spike times over the simulation time per neuron (ms)
+    """
+    nb_timesteps = int(simulation_time / timestep)
+    firing_rate_adjusted = firing_rate / timestep # Converting to spikes/timestep
+
+    # Creating a global spike train which all other spikes will correlate 
+    r = np.random.RandomState(seed)
+    global_correlating_spiketrain = r.rand(nb_timesteps) < firing_rate_adjusted
+
+    spike_trains = list()
+    for n_indx in range(num_neurons):
+        r = np.random.RandomState(seed + 2 + n_indx)
+
+        neuron_spiketrain = (1.0 - correlation)*r.rand(nb_timesteps) < firing_rate_adjusted
+        correlate_steps = r.rand(nb_timesteps) < correlation
+
+        neuron_spiketrain[correlate_steps] = global_correlating_spiketrain[correlate_steps]
+
+        spike_trains.append(np.where(neuron_spiketrain)[0])
+    return spike_trains
+
+
 def clip_spike_trains(spike_trains, max_time, min_time=0.0):
     """Clips spike trains to a particular time
 
