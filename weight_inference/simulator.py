@@ -232,7 +232,7 @@ def lif_dynamics(xpsps, weight_matrix, timestep, tau=20.0, thresh=1.0, rest=0.0,
             spike_times[s].append(t_indx)
 
     for n in range(nb_post_neurons):
-        spike_times[n] = np.asarray(spike_times[n])
+        spike_times[n] = np.asarray(spike_times[n]).astype(int)
     return acc_voltage, mem_voltage, spike_times
 
 
