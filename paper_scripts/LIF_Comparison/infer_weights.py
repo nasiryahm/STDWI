@@ -13,14 +13,15 @@ num_output_neurons = 10
 timestep = 0.25
 simulation_time = 1000 * 1e3  # X * 1000ms
 
-seeds = [1]  # np.arange(1,11)
-correlations = [0.5]
-ratio_active = 0.2
+seeds = np.arange(1,11)
+correlations = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+ratio_active = 1.0
 
 print("Ratio Active: " + str(ratio_active))
 for seed in seeds:
     print("Seed: " + str(seed))
     for correlation in correlations:
+        print("Correlation: " + str(correlation))
 
         # First we must load the data pertaining to the network activity
         path = "./" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(
@@ -56,7 +57,7 @@ for seed in seeds:
         num_stimuli = int(simulation_time / stimulus_length)
 
         # Fitting weights with the Akrout method
-        batch_sizes = [] #[1000]  # [10,100,1000]
+        batch_sizes = [100]  # [10,100,1000]
         for batch_size in batch_sizes:
             akrout_guess_dumps = fitter.akrout(
                 initial_guess_matrix,
@@ -93,8 +94,8 @@ for seed in seeds:
                 print("---- STDWI Method Complete, Fast Tau: " + str(t_fast) + ", Slow Tau: " + str(t_slow) + " ----")
 
         # Fitting weights with the RDD method
-        alphas = [] #[0.025]  # [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
-        windows = [] #[35]  # [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
+        alphas = [0.025]  # [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
+        windows = [35]  # [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
         for alpha in alphas:
             for window in windows:
                 window_size = np.round(window / timestep).astype(int)  # The window about events (30ms)
