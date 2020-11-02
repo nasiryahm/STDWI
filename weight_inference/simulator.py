@@ -51,8 +51,8 @@ def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simula
 
     This function creates the desired firing rate as a threshold and draws random numbers (tested against this threshold) to determine spikes.
     This is augmented with a shared random process to determine when neurons should share their activity with some global correlated spike-set.
-    Code from brian2 issues was helpful: https://github.com/brian-team/brian2/issues/717
-    Based on paper: Niebur, E. (2007). Generation of synthetic spike trains with defined pairwise correlations. Neural Computation, 19(7), 1720–1738. https://doi.org/10.1162/neco.2007.19.7.1720
+    Based on Single Interaction Process Model described:
+    Kuhn, A., Aertsen, A., & Rotter, S. (2003). Higher-order statistics of input ensembles and the response of simple model neurons. Neural Computation, 15(1), 67–101. https://doi.org/10.1162/089976603321043702
 
     Args:
         num_neurons (int): the number of neurons to simulate
@@ -75,9 +75,9 @@ def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simula
     for n_indx in range(num_neurons):
         r = np.random.RandomState(seed + 2 + n_indx)
 
-        neuron_spiketrain = r.rand(nb_timesteps) < (1 - np.sqrt(correlation))*firing_rate_adjusted
-        correlate_steps = r.rand(nb_timesteps) < np.sqrt(correlation)
-        neuron_spiketrain[correlate_steps] = neuron_spiketrain[correlate_steps] | global_correlating_spiketrain[correlate_steps]
+        neuron_spiketrain = r.rand(nb_timesteps) < (1 - correlation)*firing_rate_adjusted
+        correlate_steps = r.rand(nb_timesteps) < correlation
+        neuron_spiketrain[correlate_steps & global_correlating_spiketrain] = 1
 
         spike_trains.append(np.where(neuron_spiketrain)[0])
     return spike_trains
