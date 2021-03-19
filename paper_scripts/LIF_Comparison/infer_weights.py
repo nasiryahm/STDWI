@@ -57,7 +57,7 @@ for seed in seeds:
 
         # Fitting weights with the Akrout method
         batch_sizes = [1000]  # [10,100,1000]
-        decay_values = [0.01,0.05,0.1,0.2,0.3,0.4,0.5]  # [10,100,1000]
+        decay_values = [0.01,0.05,0.1,0.2,0.3,0.4,0.5, 0.6, 0.7]
         for batch_size in batch_sizes:
             for decay_value in decay_values:
                 akrout_guess_dumps = fitter.akrout(

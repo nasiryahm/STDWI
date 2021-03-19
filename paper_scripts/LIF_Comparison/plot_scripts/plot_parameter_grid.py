@@ -28,7 +28,7 @@ original_weight_matrix = np.fromfile(path + "IO_weight_matrix.npy").reshape(num_
 
 # Now outlining the set of parameters which we wish to investigate
 akrout_batch_sizes = [10,100,1000]
-akrout_decay_values = [0.01,0.05,0.1,0.2,0.3,0.4,0.5]
+akrout_decay_values = [0.01,0.05,0.1,0.2,0.3,0.4,0.5, 0.6, 0.7]
 stdwi_taus = [5.0,10.0,20.0,40.0,60.0,80.0,100.0,120.0,140.0,160.0,180.0,200.0,500.0]
 rdd_alphas = [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
 rdd_windows = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
