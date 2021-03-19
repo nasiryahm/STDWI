@@ -13,7 +13,7 @@ num_output_neurons = 10
 
 # Simulation Settings
 timestep = 0.25     # ms  
-sim_time = 1000*1e3  # X * 1000ms
+sim_time = 2500*1e3  # X * 1000ms
 nb_timesteps = int(sim_time / timestep)
 
 # Stimulation Protocol
@@ -45,7 +45,7 @@ for seed in seeds:
         simulator.random_sample_spike_train(stimulation_spike_trains,
                                             sim_time, timestep,
                                             stimulus_length, ratio_input_neurons_stimulated)
-        print("---- Stimuli Separated in Spike Times ---- Time: ", time.time() - start_time)
+        print("---- Stimuli Separated in Spike Times ---- Time: " + str(time.time() - start_time))
         start_time = time.time()
 
 

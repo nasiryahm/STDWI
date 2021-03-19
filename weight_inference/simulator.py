@@ -24,7 +24,7 @@ def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simula
     This function creates the desired firing rate as a threshold and draws random numbers (tested against this threshold) to determine spikes.
     This is augmented with a shared random process to determine when neurons should share their activity with some global correlated spike-set.
     Based on Single Interaction Process Model described:
-    Kuhn, A., Aertsen, A., & Rotter, S. (2003). Higher-order statistics of input ensembles and the response of simple model neurons. Neural Computation, 15(1), 67–101. https://doi.org/10.1162/089976603321043702
+    Kuhn et al (2003). Higher-order statistics of input ensembles and the response of simple model neurons. NeCo
     Args:
         num_neurons (int): the number of neurons to simulate
         firing_rate (float): the firing rate to simulate for these neurons (spikes/ms)
@@ -90,19 +90,19 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
     """
     nb_resamples = int(simulation_time // resample_period)
     nb_neurons = len(spike_trains)
-    masks = [np.zeros((len(spikes)) for spikes in spike_trains]
+    masks = [np.zeros((len(spikes))) for spikes in spike_trains]
 
     for s_indx in range(nb_resamples):
-        r = np.random.RandomState(n_indx + 1)
+        r = np.random.RandomState(s_indx + 1)
         off_units = r.choice(
             nb_neurons,
             int((1.0 - ratio_active) * nb_neurons),
             replace=False)
         for n_indx in off_units:
-            masks[n_indx] &= (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
+            masks[n_indx] += (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
 
     for n_indx in range(nb_neurons):
-        spike_trains[n_indx] = spike_trains[n_indx][!masks[n_indx]
+        spike_trains[n_indx] = spike_trains[n_indx][masks[n_indx] == 0.0]
 
     return spike_trains
 
