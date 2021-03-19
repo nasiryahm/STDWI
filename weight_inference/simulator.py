@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def wiener_process(nb_trials, nb_timesteps, timestep, drift, diffusion, seed=42):
     """Produces multiple discrete wiener processes all with specified drift/diffusion
 
@@ -20,29 +19,37 @@ def wiener_process(nb_trials, nb_timesteps, timestep, drift, diffusion, seed=42)
     return np.cumsum(stepwise, axis=1)
 
 
-def poisson_spike_train(num_neurons, firing_rate, simulation_time, timestep, seed=42):
-    """Produces a set of Poisson process sampled spike times
-
-    This function randomly samples from a distribution of ISIs for a poisson process.
-    It randomly seeds each neuron with it's index for repeatability.
-
+def correlated_poisson_spike_train(num_neurons, firing_rate, correlation, simulation_time, timestep, seed=42):
+    """Produces a set of Poisson process sampled spikes with a thinning process to achieve correlation
+    This function creates the desired firing rate as a threshold and draws random numbers (tested against this threshold) to determine spikes.
+    This is augmented with a shared random process to determine when neurons should share their activity with some global correlated spike-set.
+    Based on Single Interaction Process Model described:
+    Kuhn, A., Aertsen, A., & Rotter, S. (2003). Higher-order statistics of input ensembles and the response of simple model neurons. Neural Computation, 15(1), 67–101. https://doi.org/10.1162/089976603321043702
     Args:
         num_neurons (int): the number of neurons to simulate
         firing_rate (float): the firing rate to simulate for these neurons (spikes/ms)
-        simulation_time (int): the number of ms of simulation time (ms)
-
+        correlation (int): the within-group correlation
+        simulation_time (float): the number of ms of simulation time (ms)
+        timestep (float): the simulation timestepping (ms)
     Returns:
         spike_trains (list, np arrays): spike times over the simulation time per neuron (ms)
     """
+    nb_timesteps = int(simulation_time / timestep)
+    firing_rate_adjusted = firing_rate * timestep # Converting to spikes/timestep
+
+    # Creating a global spike train which all other spikes will correlate 
+    r = np.random.RandomState(seed)
+    global_correlating_spiketrain = r.rand(nb_timesteps) < firing_rate_adjusted
+
     spike_trains = list()
     for n_indx in range(num_neurons):
-        avg_num_spikes = int(firing_rate * simulation_time)
+        r = np.random.RandomState(seed + 2 + n_indx)
 
-        r = np.random.RandomState(seed + n_indx + 1)
-        nth_train = - np.cumsum((1.0 / firing_rate) * np.log(r.rand(2 * avg_num_spikes)))
-        nth_train = nth_train[nth_train < (simulation_time - timestep)]
+        neuron_spiketrain = r.rand(nb_timesteps) < (1 - correlation)*firing_rate_adjusted
+        correlate_steps = r.rand(nb_timesteps) < correlation
+        neuron_spiketrain[correlate_steps & global_correlating_spiketrain] = 1
 
-        spike_trains.append(nth_train)
+        spike_trains.append(timestep*np.where(neuron_spiketrain)[0])
     return spike_trains
 
 
@@ -83,18 +90,19 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
     """
     nb_resamples = int(simulation_time // resample_period)
     nb_neurons = len(spike_trains)
+    masks = [np.zeros((len(spikes)) for spikes in spike_trains]
+
+    for s_indx in range(nb_resamples):
+        r = np.random.RandomState(n_indx + 1)
+        off_units = r.choice(
+            nb_neurons,
+            int((1.0 - ratio_active) * nb_neurons),
+            replace=False)
+        for n_indx in off_units:
+            masks[n_indx] &= (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
 
     for n_indx in range(nb_neurons):
-        r = np.random.RandomState(n_indx + 1)
-        off_periods = r.choice(
-            nb_resamples,
-            int((1.0 - ratio_active) * nb_resamples),
-            replace=False)
-        for s_indx in off_periods:
-            mask = (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
-            spike_trains[n_indx][mask] = -1
-
-        spike_trains[n_indx] = spike_trains[n_indx][spike_trains[n_indx] >= 0.0]
+        spike_trains[n_indx] = spike_trains[n_indx][!masks[n_indx]
 
     return spike_trains
 
