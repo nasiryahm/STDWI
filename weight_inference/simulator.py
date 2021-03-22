@@ -94,15 +94,25 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
 
     for s_indx in range(nb_resamples):
         r = np.random.RandomState(s_indx + 1)
-        off_units = r.choice(
-            nb_neurons,
-            int((1.0 - ratio_active) * nb_neurons),
-            replace=False)
-        for n_indx in off_units:
+        if ratio_active < 0.5:
+            chosen_units = r.choice(
+                nb_neurons,
+                int(ratio_active * nb_neurons),
+                replace=False)
+        else:
+            chosen_units = r.choice(
+                nb_neurons,
+                int((1.0 - ratio_active) * nb_neurons),
+                replace=False)
+
+        for n_indx in chosen_units:
             masks[n_indx] += (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
 
     for n_indx in range(nb_neurons):
-        spike_trains[n_indx] = spike_trains[n_indx][masks[n_indx] == 0.0]
+        if ratio_active < 0.5:
+            spike_trains[n_indx] = spike_trains[n_indx][masks[n_indx] > 0.0]
+        else:
+            spike_trains[n_indx] = spike_trains[n_indx][masks[n_indx] == 0.0]
 
     return spike_trains
 

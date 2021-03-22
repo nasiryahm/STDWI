@@ -21,8 +21,8 @@ stimulation_FR = 200 / 1000 # spikes / ms
 stimulus_length = 100 #ms
 num_stimuli = int(sim_time / stimulus_length)
 ratio_input_neurons_stimulated = 0.2
-seeds = [1]
-correlations = [0.0]
+seeds = np.arange(1,11) #[1,2]
+correlations = [0.0] #[0.9, 1.0]
 
 print("---- Ratio Stimulated: " + str(ratio_input_neurons_stimulated) + " ----")
 for seed in seeds:

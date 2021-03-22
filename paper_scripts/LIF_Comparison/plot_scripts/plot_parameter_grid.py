@@ -4,6 +4,7 @@ import re
 import os
 import sys
 import seaborn as sns
+import json
 
 sys.path.insert(0,'../../..')
 from weight_inference import methods
@@ -13,14 +14,14 @@ num_input_neurons = 100
 num_output_neurons = 10
 timestep = 0.25
 simulation_time = 1000*1e3  # X * 1000ms
-ratio_active = 0.2
+ratio_active = 1.0
 seed = 1
 correlation = 0.0
 
 # First we must load the data pertaining to the network activity
 path = "../" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_active) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/" 
 
-outpath = "./_plots/" + str(ratio_active) + "Perc_" str(correlation) + "Corr/"
+outpath = "./_plots/" + str(ratio_active) + "Perc_" + str(correlation) + "Corr/"
 os.makedirs(outpath, exist_ok=True)
 
 # Loading weight matrices (from original plus dumped estimation methods)
@@ -39,7 +40,7 @@ stdwi_r_map = np.zeros((len(stdwi_taus), len(stdwi_taus)))
 stdwi_r_map[:,:] = None
 rdd_r_map = np.zeros((len(rdd_alphas), len(rdd_windows)))
 
-akrout_map = np.zeros((len(akrout_batch_sizes), len(akrout_decay_values))
+akrout_map = np.zeros((len(akrout_batch_sizes), len(akrout_decay_values)))
 stdwi_map = np.zeros((len(stdwi_taus), len(stdwi_taus)))
 stdwi_map[:,:] = None
 rdd_map = np.zeros((len(rdd_alphas), len(rdd_windows)))
@@ -210,3 +211,12 @@ rangevals = 1.05*np.max(np.abs(stdwi_weight_estimates[-1]))
 plt.ylim([-rangevals, rangevals])
 sns.despine()
 plt.savefig(outpath + 'STDWIScatterPlot.png', bbox_inches='tight')
+
+# Store Optimal Parameters as JSON
+parameters = {}
+parameters['Akrout'] = {'batch_size': akrout_batch_sizes[akrout_argmax[0]], 'decay_value': akrout_decay_values[akrout_argmax[1]]}
+parameters['STDWI'] = {'tau_fast': stdwi_taus[stdwi_argmax[0]], 'tau_slow': stdwi_taus[stdwi_argmax[1]]}
+parameters['RDD'] = {'bound': rdd_alphas[rdd_argmax[0]], 'window': rdd_windows[rdd_argmax[1]]}
+with open(outpath + 'optimal_parameters.json', 'w') as fp:
+    json.dump(parameters, fp)
+

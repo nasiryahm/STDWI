@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import re
 import sys, os
 import seaborn as sns
+import json
 
 sys.path.insert(0,'../../..')
 from weight_inference import methods
@@ -14,18 +15,6 @@ timestep = 0.25
 threshold = 1.0
 check_interval = 10
 
-# STDWI Params
-t_fast = 40.0
-t_slow = 200.0
-
-# Akrout params
-akrout_batch = 1000
-akrout_decay = 0.5
-
-# RDD params
-alpha = 0.025
-window = 35
-
 # Result sets
 stdwi_acc_set, stdwi_r_set = [], []
 akrout_acc_set, akrout_r_set = [], []
@@ -36,7 +25,8 @@ ratio_active = 0.2
 correlation = 0.0
 
 outpath = "./_plots/" + str(ratio_active) + "Perc_" + str(correlation) + "Corr/"
-os.makedirs(outpath, exist_ok=True)
+with open(outpath + 'optimal_parameters.json', 'r') as fp:
+    parameters = json.load(fp)
 
 for seed in seeds:
 
@@ -46,7 +36,7 @@ for seed in seeds:
     original_weight_matrix = np.fromfile(path + "IO_weight_matrix.npy").reshape(num_output_neurons, num_input_neurons)
 
     # STDWI results loading
-    stdwi_filepath = path + "stdwi_dump_" + str(t_fast) + "fast_" + str(t_slow) + "slow.npy"
+    stdwi_filepath = path + "stdwi_dump_" + str(parameters['STDWI']['tau_fast']) + "fast_" + str(parameters['STDWI']['tau_slow']) + "slow.npy"
     stdwi_weight_estimates = np.fromfile(stdwi_filepath).reshape(-1, num_output_neurons, num_input_neurons)
     num_epochs = stdwi_weight_estimates.shape[0]
 
@@ -60,7 +50,7 @@ for seed in seeds:
 
 
     # Akrout results loading
-    akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch_" + str(akrout_decay) + "decay.npy"
+    akrout_filepath = path + "akrout_dump_" + str(parameters['Akrout']['batch_size']) + "batch_" + str(parameters['Akrout']['decay_value']) + "decay.npy"
     akrout_weight_estimates = np.fromfile(akrout_filepath).reshape(-1, num_output_neurons, num_input_neurons)
 
     akrout_acc = []
@@ -73,7 +63,7 @@ for seed in seeds:
     
     
     # RDD results loading
-    rdd_filepath = path + "rdd_dump_" + str(alpha) + "bound_" + str(window) + "window.npy"
+    rdd_filepath = path + "rdd_dump_" + str(parameters['RDD']['bound']) + "bound_" + str(parameters['RDD']['window']) + "window.npy"
     rdd_weight_estimates = np.fromfile(rdd_filepath).reshape(-1, num_output_neurons, num_input_neurons)
 
     rdd_acc = []
@@ -111,7 +101,8 @@ plt.plot(mean_stdwi_acc, color='black', label="STDWI")
 ax.fill_between(range(len(mean_stdwi_acc)), mean_stdwi_acc - std_stdwi_acc, mean_stdwi_acc + std_stdwi_acc, color='black', alpha=0.25)
 plt.legend(frameon=False)
 plt.ylim([0.4,1.0])
-plt.xticks(np.arange(num_epochs + 1,step=200), np.arange(num_epochs + 1, step=200)*1.0)
+plt.xticks([0, len(mean_stdwi_acc)], [0, len(mean_stdwi_acc)])
+#plt.xticks(np.arange(num_epochs + 1,step=200), np.arange(num_epochs + 1, step=200)*1.0)
 plt.ylabel("Sign Accuracy")
 plt.xlabel("Time (s)")
 sns.despine()
@@ -133,7 +124,8 @@ plt.plot(mean_stdwi_r, color='black', label="STDWI")
 ax.fill_between(range(len(mean_stdwi_r)), mean_stdwi_r - std_stdwi_r, mean_stdwi_r + std_stdwi_r, color='black', alpha=0.25)
 plt.legend(frameon=False)
 plt.ylim([0.0,1.0])
-plt.xticks(np.arange(num_epochs + 1,step=200), np.arange(num_epochs + 1, step=200))
+#plt.xticks(np.arange(num_epochs + 1,step=200), np.arange(num_epochs + 1, step=200))
+plt.xticks([0, len(mean_stdwi_r)], [0, len(mean_stdwi_r)])
 plt.ylabel("Pearson Correlation -- r")
 plt.xlabel("Time (s)")
 sns.despine()
