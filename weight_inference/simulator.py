@@ -103,7 +103,7 @@ def clip_spike_trains(spike_trains, max_time, min_time=0.0):
     return clipped_spike_trains
 
 
-def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_period, ratio_active):
+def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_period, ratio_active, seed=42):
     """Randomly samples units from a spike train to be active/inactive. This shifts all spike trains when inactive.
 
     Note, this function expects spike trains to have positive only values.
@@ -121,18 +121,20 @@ def random_sample_spike_train(spike_trains, simulation_time, timestep, resample_
     nb_resamples = int(simulation_time // resample_period)
     nb_neurons = len(spike_trains)
     resample_period = int(resample_period / timestep)
-
-    for n_indx in range(nb_neurons):
-        r = np.random.RandomState(n_indx + 1)
-        off_periods = r.choice(
-            nb_resamples,
-            int((1.0 - ratio_active) * nb_resamples),
-            replace=False)
-        for s_indx in off_periods:
+    nb_on_units = int(ratio_active*nb_neurons)
+    
+    if nb_on_units < nb_neurons:
+        r = np.random.RandomState(seed)
+        on_unit_onehot = np.zeros((nb_neurons, nb_resamples))
+        on_unit_onehot[:nb_on_units,:] = 1
+        on_unit_onehot = np.asarray([r.permutation(on_unit_onehot[:,x]) for x in range(nb_resamples)]).transpose()
+        on_segments = np.where(on_unit_onehot)
+        for n_indx, s_indx in zip(on_segments[0], on_segments[1]):
             mask = (spike_trains[n_indx] > (resample_period * s_indx)) & (spike_trains[n_indx] <= (resample_period * (s_indx + 1)))
-            spike_trains[n_indx][mask] = -1
+            spike_trains[n_indx][mask] *= -1
 
-        spike_trains[n_indx] = spike_trains[n_indx][spike_trains[n_indx] >= 0.0]
+        for n_indx in range(nb_neurons):
+            spike_trains[n_indx] = -spike_trains[n_indx][spike_trains[n_indx] < 0.0]
 
     return spike_trains
 

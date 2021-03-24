@@ -20,6 +20,7 @@ t_fast = 40.0
 t_slow = 200.0
 # Akrout params
 akrout_batch = 1000
+akrout_decay = 0.1
 # RDD params
 alpha = 0.025
 window = 35
@@ -56,7 +57,7 @@ for ratio_active in ratios_active:
 
 
     # Akrout results loading
-    akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch.npy"
+    akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch_" + str(akrout_decay) + "decay.npy"
     akrout_weight_estimates = np.fromfile(akrout_filepath).reshape(-1, num_output_neurons, num_input_neurons)
 
     akrout_acc = []

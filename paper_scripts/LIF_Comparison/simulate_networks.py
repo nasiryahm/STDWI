@@ -13,21 +13,23 @@ num_output_neurons = 10
 
 # Simulation Settings
 timestep = 0.25     # ms  
-sim_time = 1000*1e3  # X * 1000ms
+sim_time = 4000*1e3  # X * 1000ms
 nb_timesteps = int(sim_time / timestep)
 
 # Stimulation Protocol
 stimulation_FR = 200 / 1000 # spikes / ms
 stimulus_length = 100 #ms
 num_stimuli = int(sim_time / stimulus_length)
-ratio_input_neurons_stimulated = 1.0
+ratio_input_neurons_stimulated = 0.2
 seeds = np.arange(1,11)
-correlations = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+correlations = [0.0] #[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
 print("---- Ratio Stimulated: " + str(ratio_input_neurons_stimulated) + " ----")
 for seed in seeds:
     for correlation in correlations:
         print("---- Beginning Simulation with Seed " + str(seed) + ", and Stimulation Correlation " + str(correlation) + " ----")
+        path = "./" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_input_neurons_stimulated) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/"
+        os.makedirs(path, exist_ok=True)
 
         start_time = time.time()
         # Producing Stimulation for the whole length of time
@@ -58,7 +60,7 @@ for seed in seeds:
         start_time = time.time()
 
         # Creating weight matrices from stimulation to input and input to output
-        scale = 10.0
+        scale = 12.0
         stim_weights = scale*np.eye(num_input_neurons, num_input_neurons)
         # stim_weights *= scale * 0.2 / ratio_input_neurons_stimulated
 
@@ -69,8 +71,11 @@ for seed in seeds:
         # Using input stimulation XPSPs and weight matrices to simulate network dynamics
         input_neuron_acc, input_neuron_mem, input_neuron_spiketimes = simulator.lif_dynamics(
             stimulation_xpsps, stim_weights, timestep)
-        input_neuron_xpsps = simulator.spike_trains_to_xpsps(
-            input_neuron_spiketimes, sim_time, timestep)
+        input_neuron_acc.tofile(path + "input_neuron_acc.npy")
+        input_neuron_mem.tofile(path + "input_neuron_mem.npy")
+        input_neuron_xpsps = simulator.spike_trains_to_xpsps(input_neuron_spiketimes, sim_time, timestep)
+        for i_indx in range(num_input_neurons):
+            input_neuron_spiketimes[i_indx].tofile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
         print("---- Input Network Dynamics Simulated ---- Time: " + str(time.time() - start_time))
         start_time = time.time()
 
@@ -94,14 +99,8 @@ for seed in seeds:
         """
 
         # Dumping data to file for loading
-        path = "./" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_input_neurons_stimulated) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/"
-        os.makedirs(path, exist_ok=True)
         io_weights.tofile(path + "IO_weight_matrix.npy")
 
-        input_neuron_acc.tofile(path + "input_neuron_acc.npy")
-        input_neuron_mem.tofile(path + "input_neuron_mem.npy")
-        for i_indx in range(num_input_neurons):
-            input_neuron_spiketimes[i_indx].tofile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
 
         output_neuron_acc.tofile(path + "output_neuron_acc.npy")
         output_neuron_mem.tofile(path + "output_neuron_mem.npy")

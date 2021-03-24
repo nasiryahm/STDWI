@@ -13,11 +13,12 @@ num_input_neurons = 100
 num_output_neurons = 10
 timestep = 0.25
 simulation_time = 1000*1e3  # X * 1000ms
-ratio_active = 0.2
+ratio_active = 1.0
+correlation = 0.0
 seed = 1
 
 # First we must load the data pertaining to the network activity
-path = "../" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_active) + "Perc_" + str(seed) + "Seed/" 
+path = "../" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_active) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/" 
 
 outpath = "./_plots/" + str(ratio_active) + "Perc/"
 os.makedirs(outpath, exist_ok=True)
@@ -27,17 +28,18 @@ original_weight_matrix = np.fromfile(path + "IO_weight_matrix.npy").reshape(num_
 
 # Now outlining the set of parameters which we wish to investigate
 akrout_batch_sizes = [10,100,1000]
+akrout_decays = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 stdwi_taus = [5.0,10.0,20.0,40.0,60.0,80.0,100.0,120.0,140.0,160.0,180.0,200.0,500.0]
 rdd_alphas = [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
 rdd_windows = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
 
 # Constructing maps for pearson correlation and accuracies
-akrout_r_map = np.zeros((len(akrout_batch_sizes), 1))
+akrout_r_map = np.zeros((len(akrout_batch_sizes),  len(akrout_decays)))
 stdwi_r_map = np.zeros((len(stdwi_taus), len(stdwi_taus)))
 stdwi_r_map[:,:] = None
 rdd_r_map = np.zeros((len(rdd_alphas), len(rdd_windows)))
 
-akrout_map = np.zeros((len(akrout_batch_sizes), 1))
+akrout_map = np.zeros((len(akrout_batch_sizes), len(akrout_decays)))
 stdwi_map = np.zeros((len(stdwi_taus), len(stdwi_taus)))
 stdwi_map[:,:] = None
 rdd_map = np.zeros((len(rdd_alphas), len(rdd_windows)))
@@ -45,18 +47,22 @@ rdd_map = np.zeros((len(rdd_alphas), len(rdd_windows)))
 # Populating the maps
 # Akrout
 akrout_maxval = 0.0
+akrout_r_atmax = 0.0
 akrout_argmax = 0
 for b_indx, batch_size in enumerate(akrout_batch_sizes):
-    filepath = path + "akrout_dump_" + str(batch_size) + "batch.npy"
-    weight_estimates = np.fromfile(filepath).reshape(-1, num_output_neurons, num_input_neurons)
-    akrout_map[b_indx] = methods.sign_alignment(original_weight_matrix, weight_estimates[-1])
-    akrout_r_map[b_indx] = np.corrcoef(original_weight_matrix.flatten(), weight_estimates[-1].flatten())[0,1]
-    if akrout_r_map[b_indx] > akrout_maxval:
-        akrout_maxval = akrout_r_map[b_indx, 0]
-        akrout_argmax = b_indx
+    for d_indx, decay in enumerate(akrout_decays):
+        filepath = path + "akrout_dump_" + str(batch_size) + "batch_" + str(decay) + "decay.npy"
+        weight_estimates = np.fromfile(filepath).reshape(-1, num_output_neurons, num_input_neurons)
+        akrout_map[b_indx, d_indx] = methods.sign_alignment(original_weight_matrix, weight_estimates[-1])
+        akrout_r_map[b_indx, d_indx] = np.corrcoef(original_weight_matrix.flatten(), weight_estimates[-1].flatten())[0,1]
+        if akrout_map[b_indx, d_indx] > akrout_maxval:
+            akrout_maxval = akrout_map[b_indx, d_indx]
+            akrout_r_atmax = akrout_r_map[b_indx, d_indx]
+            akrout_argmax = (b_indx, d_indx)
 
 # STDWI
 stdwi_maxval = 0.0
+stdwi_r_atmax = 0.0
 stdwi_argmax = (0,0)
 for f_indx, t_fast in enumerate(stdwi_taus):
     for s_indx, t_slow in enumerate(stdwi_taus[f_indx+1:]):
@@ -64,13 +70,15 @@ for f_indx, t_fast in enumerate(stdwi_taus):
         weight_estimates = np.fromfile(filepath).reshape(-1, num_output_neurons, num_input_neurons)
         stdwi_map[f_indx, f_indx + s_indx] = methods.sign_alignment(original_weight_matrix, weight_estimates[-1])
         stdwi_r_map[f_indx, f_indx + s_indx] = np.corrcoef(original_weight_matrix.flatten(), weight_estimates[-1].flatten())[0,1]
-        if (stdwi_r_map[f_indx, f_indx + s_indx] > stdwi_maxval):
-            stdwi_maxval = stdwi_r_map[f_indx, f_indx + s_indx]
+        if (stdwi_map[f_indx, f_indx + s_indx] > stdwi_maxval):
+            stdwi_maxval = stdwi_map[f_indx, f_indx + s_indx]
+            stdwi_r_atmax = stdwi_r_map[f_indx, f_indx + s_indx]
             stdwi_argmax = (f_indx, f_indx + s_indx)
 
 
 # RDD
 rdd_maxval = 0.0
+rdd_r_atmax = 0.0
 rdd_argmax = (0,0)
 for a_indx, alpha in enumerate(rdd_alphas):
     for w_indx, window_size in enumerate(rdd_windows):
@@ -78,14 +86,17 @@ for a_indx, alpha in enumerate(rdd_alphas):
         weight_estimates = np.fromfile(filepath).reshape(-1, num_output_neurons, num_input_neurons)
         rdd_map[a_indx, w_indx] = methods.sign_alignment(original_weight_matrix, weight_estimates[-1])
         rdd_r_map[a_indx, w_indx] = np.corrcoef(original_weight_matrix.flatten(), weight_estimates[-1].flatten())[0,1]
-        if (rdd_r_map[a_indx, w_indx] > rdd_maxval):
-            rdd_maxval = rdd_r_map[a_indx, w_indx]
+        if (rdd_map[a_indx, w_indx] > rdd_maxval):
+            rdd_maxval = rdd_map[a_indx, w_indx]
+            rdd_r_atmax = rdd_r_map[a_indx, w_indx]
             rdd_argmax = (a_indx, w_indx)
 
 # Pearson Correlation Plots
 plt.imshow(akrout_r_map.T, cmap="magma", vmin=0.5, vmax=1.0)
 plt.xlabel("Baseline Window Sizes")
+plt.ylabel("Weight Decay Coefficient")
 plt.xticks(np.arange(len(akrout_batch_sizes)), akrout_batch_sizes, rotation='vertical')
+plt.yticks(np.arange(len(akrout_decays)), akrout_decays)
 cbar = plt.colorbar()
 cbar.ax.get_yaxis().labelpad = 15
 cbar.ax.set_ylabel('Pearson Correlation, r', rotation=270)
@@ -117,7 +128,9 @@ plt.clf()
 # Sign Alignment Plots
 plt.imshow(akrout_map.T, cmap="magma", vmin=0.5, vmax=1.0)
 plt.xlabel("Baseline Window Sizes")
+plt.ylabel("Weight Decay Coefficient")
 plt.xticks(np.arange(len(akrout_batch_sizes)), akrout_batch_sizes, rotation='vertical')
+plt.yticks(np.arange(len(akrout_decays)), akrout_decays)
 cbar = plt.colorbar()
 cbar.ax.get_yaxis().labelpad = 15
 cbar.ax.set_ylabel('Sign Alignment', rotation=270)
@@ -149,8 +162,11 @@ plt.clf()
 print("Best Sign Accuracy Measurements:")
 print("Akrout, STDWI, RDD")
 print(akrout_maxval, stdwi_maxval, rdd_maxval)
+print("Pearson at best sign acc:")
+print("Akrout, STDWI, RDD")
+print(akrout_r_atmax, stdwi_r_atmax, rdd_r_atmax)
 
-print("Akrout Window: " + str(akrout_batch_sizes[akrout_argmax]))
+print("Akrout Params: Window=" + str(akrout_batch_sizes[akrout_argmax[0]]) + " Decay=" + str(akrout_decays[akrout_argmax[1]]))
 print("STDWI Params: Fast=" + str(stdwi_taus[stdwi_argmax[0]]) + " Slow=" + str(stdwi_taus[stdwi_argmax[1]]))
 print("RDD Params: Alpha=" + str(rdd_alphas[rdd_argmax[0]]) + " Window=" + str(rdd_windows[rdd_argmax[1]]))
 
@@ -171,7 +187,7 @@ plt.savefig(outpath + 'RDDScatterPlot.png', bbox_inches='tight')
 plt.clf()
 
 # Akrout Scatter
-filepath = path + "akrout_dump_" + str(akrout_batch_sizes[akrout_argmax]) + "batch.npy"
+filepath = path + "akrout_dump_" + str(akrout_batch_sizes[akrout_argmax[0]]) + "batch_"  + str(akrout_decays[akrout_argmax[1]]) + "decay.npy"
 akrout_weight_estimates = np.fromfile(filepath).reshape(-1, num_output_neurons, num_input_neurons)
 plt.figure(figsize=(4,3), dpi=200)
 plt.scatter(original_weight_matrix, akrout_weight_estimates[-1], color='red', label="Akrout", alpha=0.25)

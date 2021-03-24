@@ -12,10 +12,10 @@ drift = 10.0
 diffusion = 0.5
 threshold = 1.0
 reset = 0.0
-simulation_length = 250*1e3
+simulation_length = 1000*1e3
 nb_timesteps = int(simulation_length / timestep)
 
-seeds = [1] # np.arange(1,11)
+seeds = np.arange(1,11)
 
 for seed in seeds:
     print("---- Beginning with Seed: " + str(seed) + " ----")

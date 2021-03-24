@@ -15,11 +15,12 @@ threshold = 1.0
 check_interval = 10
 
 # STDWI Params
-t_fast = 40.0
+t_fast = 20.0
 t_slow = 200.0
 
 # Akrout params
-akrout_batch = 1000
+akrout_batch = 100
+akrout_decay = 0.2
 
 # RDD params
 alpha = 0.025
@@ -30,16 +31,17 @@ stdwi_acc_set, stdwi_r_set = [], []
 akrout_acc_set, akrout_r_set = [], []
 rdd_acc_set, rdd_r_set = [], []
 
-seeds = np.arange(1,11)
+seeds = [1] #np.arange(1,11)
 ratio_active = 0.2
+correlation = 0.0
 
-outpath = "./_plots/" + str(ratio_active) + "Perc/"
+outpath = "./_plots/" + str(ratio_active) + "Perc_" + str(correlation) + "Corr/"
 os.makedirs(outpath, exist_ok=True)
 
 for seed in seeds:
 
     # Path and folder creation
-    path = "../" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_active) + "Perc_" + str(seed) + "Seed/" 
+    path = "../" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_active) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/" 
 
     original_weight_matrix = np.fromfile(path + "IO_weight_matrix.npy").reshape(num_output_neurons, num_input_neurons)
 
@@ -58,7 +60,7 @@ for seed in seeds:
 
 
     # Akrout results loading
-    akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch.npy"
+    akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch_" + str(akrout_decay) + "decay.npy"
     akrout_weight_estimates = np.fromfile(akrout_filepath).reshape(-1, num_output_neurons, num_input_neurons)
 
     akrout_acc = []

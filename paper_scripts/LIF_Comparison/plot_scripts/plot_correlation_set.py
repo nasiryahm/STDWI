@@ -20,6 +20,7 @@ t_slow = 200.0
 
 # Akrout params
 akrout_batch = 100
+akrout_decay = 0.1
 
 # RDD params
 alpha = 0.025
@@ -62,7 +63,7 @@ for c_indx, correlation in enumerate(correlations):
     
     
         # Akrout results loading
-        akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch.npy"
+        akrout_filepath = path + "akrout_dump_" + str(akrout_batch) + "batch_" + str(akrout_decay) + "decay.npy"
         akrout_weight_estimates = np.fromfile(akrout_filepath).reshape(-1, num_output_neurons, num_input_neurons)
     
         akrout_acc = []
