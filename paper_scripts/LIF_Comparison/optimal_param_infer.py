@@ -12,11 +12,15 @@ from weight_inference import fitter
 num_input_neurons = 100
 num_output_neurons = 10
 timestep = 0.25
-simulation_time = 2500 * 1e3  # X * 1000ms
+simulation_time = 1000 * 1e3  # X * 1000ms
+
 
 seeds = np.arange(2,11)
-correlations = [0.0] #[0.9,1.0] #[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-ratio_active = 0.2
+correlations = [0.0, 0.2, 0.3, 0.3]
+ratio_active = 1.0
+
+# Akrout, STDWI, RDD
+methods_todo = [True, False, False]
 
 print("Ratio Active: " + str(ratio_active))
 for seed in seeds:
@@ -60,51 +64,53 @@ for seed in seeds:
         nb_timesteps_per_stimulus = int(stimulus_length / timestep)
         num_stimuli = int(simulation_time / stimulus_length)
 
-        # Fitting weights with the Akrout method
-        akrout_guess_dumps = fitter.akrout(
-            initial_guess_matrix,
-            input_neuron_spiketimes,
-            output_neuron_spiketimes,
-            simulation_time,
-            stimulus_length,
-            parameters['Akrout']['batch_size'],
-            learning_rate,
-            check_interval,
-            decay_factor=parameters['Akrout']['batch_size'])
-        akrout_guess_dumps = np.asarray(akrout_guess_dumps)
-        akrout_guess_dumps.tofile(path + "akrout_dump_" + str(parameterrs['Akrout']['batch_size']) + "batch_" + str(parameterrs['Akrout']['decay_value']) + "decay.npy")
-        print("---- Akrout Method Complete, Batch Size: " + str(parameterrs['Akrout']['batch_size']) + ", Decay Factor:" + str(parameterrs['Akrout']['decay_value']) + " ----")
-
+        if methods_todo[0]:
+            # Fitting weights with the Akrout method
+            akrout_guess_dumps = fitter.akrout(
+                initial_guess_matrix,
+                input_neuron_spiketimes,
+                output_neuron_spiketimes,
+                simulation_time,
+                stimulus_length,
+                parameters['Akrout']['batch_size'],
+                learning_rate,
+                check_interval,
+                decay_factor=parameters['Akrout']['decay_value'])
+            akrout_guess_dumps = np.asarray(akrout_guess_dumps)
+            akrout_guess_dumps.tofile(path + "akrout_dump_" + str(parameters['Akrout']['batch_size']) + "batch_" + str(parameters['Akrout']['decay_value']) + "decay.npy")
+            print("---- Akrout Method Complete, Batch Size: " + str(parameters['Akrout']['batch_size']) + ", Decay Factor:" + str(parameters['Akrout']['decay_value']) + " ----")
         # Fitting weights with the STDWI method
         a_fast = 1.0
         a_slow = a_fast * (parameters['STDWI']['tau_fast'] / parameters['STDWI']['tau_slow'])
-        stdwi_guess_dumps = fitter.stdwi(
-            initial_guess_matrix,
-            input_neuron_spiketimes,
-            output_neuron_spiketimes,
-            simulation_time,
-            stimulus_length,
-            timestep,
-            a_slow, parameters['STDWI']['tau_slow'],
-            a_fast, parameters['STDWI']['tau_fast'],
-            learning_rate, check_interval, decay_factor=0.1)
-        stdwi_guess_dumps = np.asarray(stdwi_guess_dumps)
-        stdwi_guess_dumps.tofile(path + "stdwi_dump_" + str(parameters['STDWI']['tau_fast']) + "fast_" + str(parameters['STDWI']['tau_slow']) + "slow.npy")
-        print("---- STDWI Method Complete, Fast Tau: " + str(parameters['STDWI']['tau_fast']) + ", Slow Tau: " + str(parameters['STDWI']['tau_slow']) + " ----")
+        if methods_todo[1]:
+            stdwi_guess_dumps = fitter.stdwi(
+                initial_guess_matrix,
+                input_neuron_spiketimes,
+                output_neuron_spiketimes,
+                simulation_time,
+                stimulus_length,
+                timestep,
+                a_slow, parameters['STDWI']['tau_slow'],
+                a_fast, parameters['STDWI']['tau_fast'],
+                learning_rate, check_interval, decay_factor=0.1)
+            stdwi_guess_dumps = np.asarray(stdwi_guess_dumps)
+            stdwi_guess_dumps.tofile(path + "stdwi_dump_" + str(parameters['STDWI']['tau_fast']) + "fast_" + str(parameters['STDWI']['tau_slow']) + "slow.npy")
+            print("---- STDWI Method Complete, Fast Tau: " + str(parameters['STDWI']['tau_fast']) + ", Slow Tau: " + str(parameters['STDWI']['tau_slow']) + " ----")
 
         # Fitting weights with the RDD method
         window_size = np.round(parameters['RDD']['window'] / timestep).astype(int)  # The window about events (30ms)
         threshold = 1.0
-        rdd_guess_dumps = fitter.rdd(
-            initial_guess_matrix,
-            input_neuron_mem,
-            input_neuron_acc,
-            output_neuron_xpsps,
-            parameters['RDD']['bound'], window_size,
-            threshold,
-            timestep,
-            learning_rate,
-            check_interval)
-        rdd_guess_dumps = np.asarray(rdd_guess_dumps)
-        rdd_guess_dumps.tofile(path + "rdd_dump_" + str(parameters['RDD']['bound']) + "bound_" + str(parameters['RDD']['window']) + "window.npy")
-        print("---- RDD Method Complete, alpha: " + str(parameters['RDD']['bound']) + ", window: " + str(parameters['RDD']['window']) + " ----")
+        if methods_todo[1]:
+            rdd_guess_dumps = fitter.rdd(
+                initial_guess_matrix,
+                input_neuron_mem,
+                input_neuron_acc,
+                output_neuron_xpsps,
+                parameters['RDD']['bound'], window_size,
+                threshold,
+                timestep,
+                learning_rate,
+                check_interval)
+            rdd_guess_dumps = np.asarray(rdd_guess_dumps)
+            rdd_guess_dumps.tofile(path + "rdd_dump_" + str(parameters['RDD']['bound']) + "bound_" + str(parameters['RDD']['window']) + "window.npy")
+            print("---- RDD Method Complete, alpha: " + str(parameters['RDD']['bound']) + ", window: " + str(parameters['RDD']['window']) + " ----")

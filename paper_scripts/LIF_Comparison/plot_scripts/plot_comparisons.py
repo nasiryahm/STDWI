@@ -27,6 +27,7 @@ correlation = 0.0
 outpath = "./_plots/" + str(ratio_active) + "Perc_" + str(correlation) + "Corr/"
 with open(outpath + 'optimal_parameters.json', 'r') as fp:
     parameters = json.load(fp)
+print(parameters)
 
 for seed in seeds:
 

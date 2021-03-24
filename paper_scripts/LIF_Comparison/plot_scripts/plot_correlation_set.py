@@ -14,24 +14,11 @@ timestep = 0.25
 threshold = 1.0
 check_interval = 10
 
-# STDWI Params
-t_fast = 40.0
-t_slow = 200.0
-
-# Akrout params
-akrout_batch = 100
-akrout_decay = 0.5
-
-# RDD params
-alpha = 0.025
-window = 35
-
-seed = 1
 ratio_active = 1.0
 seeds = np.arange(1,11)
 correlations = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
-outpath = "./_plots/" + str(ratio_active) + "Perc/"
+outpath = "./_plots/" + str(ratio_active) + "Perc_" + "CorrelationAnalysis/"
 os.makedirs(outpath, exist_ok=True)
 
 # Result sets
@@ -41,7 +28,10 @@ rdd_acc_set, rdd_r_set = [[] for c in correlations], [[] for c in correlations]
 
 
 for c_indx, correlation in enumerate(correlations):
+    # Getting optimal parameters
+
     for seed in seeds:
+
     
         # Path and folder creation
         path = "../" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(ratio_active) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/" 
