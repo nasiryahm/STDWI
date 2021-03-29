@@ -12,15 +12,15 @@ from weight_inference import fitter
 num_input_neurons = 100
 num_output_neurons = 10
 timestep = 0.25
-simulation_time = 1000 * 1e3  # X * 1000ms
+simulation_time = 4000 * 1e3  # X * 1000ms
 
 
-seeds = np.arange(2,11)
-correlations = [0.0, 0.2, 0.3, 0.3]
-ratio_active = 1.0
+seeds = np.arange(2,5)
+correlations = [0.0] #[0.0, 0.2, 0.3, 0.3]
+ratio_active = 0.2
 
 # Akrout, STDWI, RDD
-methods_todo = [True, False, False]
+methods_todo = [True, True, True]
 
 print("Ratio Active: " + str(ratio_active))
 for seed in seeds:
@@ -30,6 +30,7 @@ for seed in seeds:
         parampath = "./plot_scripts/_plots/" + str(ratio_active) + "Perc_" + str(correlation) + "Corr/"
         with open(parampath + 'optimal_parameters.json', 'r') as fp:
             parameters = json.load(fp)
+        print(parameters)
 
         # First we must load the data pertaining to the network activity
         path = "./" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(
@@ -57,8 +58,8 @@ for seed in seeds:
         initial_guess_matrix = 0.001 * (r.uniform(size=(num_output_neurons, num_input_neurons)) - 0.5)
 
         # Setting up parameters for learning
-        learning_rate = 5e-4
-        check_interval = 10
+        learning_rate = 1e-4
+        check_interval = 100
 
         stimulus_length = 100.0
         nb_timesteps_per_stimulus = int(stimulus_length / timestep)
@@ -66,7 +67,7 @@ for seed in seeds:
 
         if methods_todo[0]:
             # Fitting weights with the Akrout method
-            akrout_guess_dumps = fitter.akrout(
+            akrout_guess_dumps, _, _ = fitter.akrout(
                 initial_guess_matrix,
                 input_neuron_spiketimes,
                 output_neuron_spiketimes,
@@ -83,7 +84,7 @@ for seed in seeds:
         a_fast = 1.0
         a_slow = a_fast * (parameters['STDWI']['tau_fast'] / parameters['STDWI']['tau_slow'])
         if methods_todo[1]:
-            stdwi_guess_dumps = fitter.stdwi(
+            stdwi_guess_dumps, _ = fitter.stdwi(
                 initial_guess_matrix,
                 input_neuron_spiketimes,
                 output_neuron_spiketimes,

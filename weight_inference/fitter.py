@@ -2,24 +2,26 @@ import numpy as np
 from weight_inference import simulator, methods
 
 
-def akrout(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketimes, simulation_time, stimulus_length, batch_size, learning_rate, check_interval, decay_factor=0.5):
+def akrout(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketimes, simulation_time, stimulus_length, batch_size, learning_rate, check_interval, decay_factor=0.5, input_baseline=None, output_baseline=None):
     """A function processing spiking data to rate information per stimulus and batch-wise doing the Akrout algorithm
     """
     nb_stimuli = int(simulation_time / stimulus_length)
     nb_batches = int(nb_stimuli / batch_size)
     # Calculating firing rate baselines
-    input_baseline = np.zeros((len(input_neuron_spiketimes), nb_batches))
-    output_baseline = np.zeros((len(output_neuron_spiketimes), nb_batches))
-    for i_indx in range(len(input_neuron_spiketimes)):
-        for b_indx in range(nb_batches):
-            mask = input_neuron_spiketimes[i_indx] >= (stimulus_length*batch_size*b_indx)
-            mask = mask & (input_neuron_spiketimes[i_indx] < (stimulus_length*batch_size*(b_indx+1)))
-            input_baseline[i_indx, b_indx] = np.sum(mask) / batch_size
-    for o_indx in range(len(output_neuron_spiketimes)):
-        for b_indx in range(nb_batches):
-            mask = output_neuron_spiketimes[o_indx] >= (stimulus_length*batch_size*b_indx)
-            mask = mask & (output_neuron_spiketimes[o_indx] < (stimulus_length*batch_size*(b_indx+1)))
-            output_baseline[o_indx, b_indx] = np.sum(mask) / batch_size
+    if input_baseline is None:
+        input_baseline = np.zeros((len(input_neuron_spiketimes), nb_batches))
+        for i_indx in range(len(input_neuron_spiketimes)):
+            for b_indx in range(nb_batches):
+                mask = input_neuron_spiketimes[i_indx] >= (stimulus_length*batch_size*b_indx)
+                mask = mask & (input_neuron_spiketimes[i_indx] < (stimulus_length*batch_size*(b_indx+1)))
+                input_baseline[i_indx, b_indx] = np.sum(mask) / batch_size
+    if output_baseline is None:
+        output_baseline = np.zeros((len(output_neuron_spiketimes), nb_batches))
+        for o_indx in range(len(output_neuron_spiketimes)):
+            for b_indx in range(nb_batches):
+                mask = output_neuron_spiketimes[o_indx] >= (stimulus_length*batch_size*b_indx)
+                mask = mask & (output_neuron_spiketimes[o_indx] < (stimulus_length*batch_size*(b_indx+1)))
+                output_baseline[o_indx, b_indx] = np.sum(mask) / batch_size
 
     akrout_guess = np.copy(initial_guess_matrix)
     akrout_weight_dumps = []    
@@ -36,10 +38,10 @@ def akrout(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketim
             stimulus_length,
             decay_factor,
             time_offset=(s_indx*stimulus_length))
-    return akrout_weight_dumps
+    return akrout_weight_dumps, input_baseline, output_baseline
 
 
-def stdwi(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketimes, simulation_time, stimulus_length, timestep, a_slow, t_slow, a_fast, t_fast, learning_rate, check_interval, decay_factor=0.1, alltoall=True,  offsetanalysis=0):
+def stdwi(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketimes, simulation_time, stimulus_length, timestep, a_slow, t_slow, a_fast, t_fast, learning_rate, check_interval, decay_factor=0.1, alltoall=True,  offsetanalysis=0, fast_input_trace=None):
     """A function which preprocesses spiking data and carries out stdwi "inference" to estimate weights
     """
     nb_input_neurons = len(input_neuron_spiketimes)
@@ -54,10 +56,11 @@ def stdwi(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketime
     output_binary_spike_matrix = simulator.binary_spike_matrix(output_neuron_spiketimes, simulation_time, timestep)
 
     slow_input_trace = np.zeros((nb_input_neurons, nb_timesteps_per_stimulus*nb_stimuli))
-    fast_input_trace = np.zeros((nb_input_neurons, nb_timesteps_per_stimulus*nb_stimuli))
-    
     slow_input_trace = methods.create_stdwi_trace(slow_input_trace, input_binary_spike_matrix, a_slow, t_slow, timestep, alltoall)
-    fast_input_trace = methods.create_stdwi_trace(fast_input_trace, input_binary_spike_matrix, a_fast, t_fast, timestep, alltoall)
+    
+    if fast_input_trace is None:
+        fast_input_trace = np.zeros((nb_input_neurons, nb_timesteps_per_stimulus*nb_stimuli))
+        fast_input_trace = methods.create_stdwi_trace(fast_input_trace, input_binary_spike_matrix, a_fast, t_fast, timestep, alltoall)
 
     if not alltoall:
         slow_input_trace *= (np.sum(fast_input_trace) / np.sum(slow_input_trace))
@@ -79,7 +82,7 @@ def stdwi(initial_guess_matrix, input_neuron_spiketimes, output_neuron_spiketime
                 slow_input_subtrace, fast_input_subtrace,
                 learning_rate, decay_factor)
 
-    return stdwi_weight_dumps
+    return stdwi_weight_dumps, fast_input_trace
 
 
 def rdd(initial_guess_matrix, presynaptic_membrane_voltages, presynaptic_accum_voltages, postsynaptic_XPSPs, alpha,

@@ -2,116 +2,135 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re
 import sys
+import getopt
 
 # This import statement assumes you execute this python script from within this folder
 sys.path.insert(0, '../..')
 from weight_inference import fitter
 
+seed = 0
+correlation = 0.0
+ratio_input_neurons_stimulated = 1.0
+
+#Setting up the options for simulation
+opts, remaining = getopt.getopt(
+    sys.argv[1:],
+    '',
+    ['seed=',
+     'correlation=',
+     'ratio_inputs_stimulated='])
+
+for opt, arg in opts:
+    if opt == '--seed':
+        seed = int(arg)
+    if opt == '--correlation':
+        correlation = round(float(arg), 1)
+    if opt == '--ratio_inputs_stimulated':
+        ratio_input_neurons_stimulated = float(arg)
+
+
 # Network Settings
 num_input_neurons = 100
 num_output_neurons = 10
 timestep = 0.25
-simulation_time = 1000 * 1e3  # X * 1000ms
+simulation_time = 5000 * 1e3  # X * 1000ms
 
-seeds = [1] #np.arange(1,11)
-correlations = [0.8] #[0.9,1.0] #[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-ratio_active = 1.0
+print("Ratio Active: " + str(ratio_input_neurons_stimulated))
+print("Seed: " + str(seed))
+print("Correlation: " + str(correlation))
+# First we must load the data pertaining to the network activity
+path = "./" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(
+    ratio_input_neurons_stimulated) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/"
 
-print("Ratio Active: " + str(ratio_active))
-for seed in seeds:
-    print("Seed: " + str(seed))
-    for correlation in correlations:
-        print("Correlation: " + str(correlation))
-        # First we must load the data pertaining to the network activity
-        path = "./" + str(num_input_neurons) + "Inputs_" + str(num_output_neurons) + "Outputs_" + str(
-            ratio_active) + "Perc_" + str(correlation) + "Corr_" + str(seed) + "Seed/"
+original_weight_matrix = np.fromfile(path + "IO_weight_matrix.npy").reshape(num_output_neurons, num_input_neurons)
 
-        original_weight_matrix = np.fromfile(path + "IO_weight_matrix.npy").reshape(num_output_neurons, num_input_neurons)
-        input_neuron_acc = np.fromfile(path + "input_neuron_acc.npy").reshape(num_input_neurons, -1)
-        input_neuron_mem = np.fromfile(path + "input_neuron_mem.npy").reshape(num_input_neurons, -1)
-        output_neuron_xpsps = np.fromfile(path + "output_neuron_xpsps.npy").reshape(num_output_neurons, -1)
-        print("---- Weights and Membrane Voltages Loaded----")
+input_neuron_spiketimes = []
+for i_indx in range(num_input_neurons):
+    train = np.fromfile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
+    input_neuron_spiketimes.append(train)
 
-        input_neuron_spiketimes = []
-        for i_indx in range(num_input_neurons):
-            train = np.fromfile(path + str(i_indx) + "_input_neuron_spiketimes.npy")
-            input_neuron_spiketimes.append(train)
+output_neuron_spiketimes = []
+for o_indx in range(num_output_neurons):
+    train = np.fromfile(path + str(o_indx) + "_output_neuron_spiketimes.npy")
+    output_neuron_spiketimes.append(train)
+print("---- Spiking Data Loaded ----")
 
-        output_neuron_spiketimes = []
-        for o_indx in range(num_output_neurons):
-            train = np.fromfile(path + str(o_indx) + "_output_neuron_spiketimes.npy")
-            output_neuron_spiketimes.append(train)
-        print("---- Spiking Data Loaded ----")
+# Initialising a random "guess" matrix which all solvers will use as a prior
+r = np.random.RandomState(seed=42)
+initial_guess_matrix = 0.001 * (r.uniform(size=(num_output_neurons, num_input_neurons)) - 0.5)
 
-        # Initialising a random "guess" matrix which all solvers will use as a prior
-        r = np.random.RandomState(seed=42)
-        initial_guess_matrix = 0.001 * (r.uniform(size=(num_output_neurons, num_input_neurons)) - 0.5)
+# Setting up parameters for learning
+learning_rate = 1.25e-4
+check_interval = 100
 
-        # Setting up parameters for learning
-        learning_rate = 5e-4
-        check_interval = 10
+stimulus_length = 100.0
+nb_timesteps_per_stimulus = int(stimulus_length / timestep)
+num_stimuli = int(simulation_time / stimulus_length)
 
-        stimulus_length = 100.0
-        nb_timesteps_per_stimulus = int(stimulus_length / timestep)
-        num_stimuli = int(simulation_time / stimulus_length)
+# Fitting weights with the Akrout method
+batch_sizes = [1000] #[10,100,1000]
+decay_values = [0.5] #[0.01,0.05,0.1,0.2,0.3,0.4,0.5,1.0]
+for batch_size in batch_sizes:
+    input_baseline, output_baseline = None, None
+    for decay_value in decay_values:
+        akrout_guess_dumps, input_baseline, output_baseline = fitter.akrout(
+            initial_guess_matrix,
+            input_neuron_spiketimes,
+            output_neuron_spiketimes,
+            simulation_time,
+            stimulus_length,
+            batch_size,
+            learning_rate,
+            check_interval,
+            decay_factor=decay_value,
+            input_baseline=input_baseline,
+            output_baseline=output_baseline)
+        akrout_guess_dumps = np.asarray(akrout_guess_dumps)
+        akrout_guess_dumps.tofile(path + "akrout_dump_" + str(batch_size) + "batch_" + str(decay_value) + "decay.npy")
+        print("---- Akrout Method Complete, Batch Size: " + str(batch_size) + ", Decay Factor:" + str(decay_value) + " ----")
 
-        # Fitting weights with the Akrout method
-        batch_sizes = [1000] #[10,100,1000]
-        decay_values = [0.4, 0.5] #[0.01,0.05,0.1,0.2,0.3,0.4,0.5, 0.6, 0.7]
-        for batch_size in batch_sizes:
-            for decay_value in decay_values:
-                akrout_guess_dumps = fitter.akrout(
-                    initial_guess_matrix,
-                    input_neuron_spiketimes,
-                    output_neuron_spiketimes,
-                    simulation_time,
-                    stimulus_length,
-                    batch_size,
-                    learning_rate,
-                    check_interval,
-                    decay_factor=decay_value)
-                akrout_guess_dumps = np.asarray(akrout_guess_dumps)
-                akrout_guess_dumps.tofile(path + "akrout_dump_" + str(batch_size) + "batch_" + str(decay_value) + "decay.npy")
-                print("---- Akrout Method Complete, Batch Size: " + str(batch_size) + ", Decay Factor:" + str(decay_value) + " ----")
-        continue
+# Fitting weights with the STDWI method
+a_fast = 1.0
+taus = [20.0] #[5.0,10.0,20.0,40.0,60.0,80.0,100.0,120.0,140.0,160.0,180.0,200.0,500.0]
+for f_indx, t_fast in enumerate(taus):
+    fast_input_trace = None
+    for t_slow in [140.0]: #taus[(f_indx+1):]:
+        a_slow = a_fast * (t_fast / t_slow)
+        stdwi_guess_dumps, fast_input_trace = fitter.stdwi(
+            initial_guess_matrix,
+            input_neuron_spiketimes,
+            output_neuron_spiketimes,
+            simulation_time,
+            stimulus_length,
+            timestep,
+            a_slow, t_slow,
+            a_fast, t_fast,
+            learning_rate, check_interval, decay_factor=0.5, fast_input_trace=fast_input_trace)
+        stdwi_guess_dumps = np.asarray(stdwi_guess_dumps)
+        stdwi_guess_dumps.tofile(path + "stdwi_dump_" + str(t_fast) + "fast_" + str(t_slow) + "slow.npy")
+        print("---- STDWI Method Complete, Fast Tau: " + str(t_fast) + ", Slow Tau: " + str(t_slow) + " ----")
 
-        # Fitting weights with the STDWI method
-        a_fast = 1.0
-        taus = [5.0,10.0,20.0,40.0,60.0,80.0,100.0,120.0,140.0,160.0,180.0,200.0,500.0]
-        for f_indx, t_fast in enumerate(taus):
-            for t_slow in taus[(f_indx+1):]:
-                a_slow = a_fast * (t_fast / t_slow)
-                stdwi_guess_dumps = fitter.stdwi(
-                    initial_guess_matrix,
-                    input_neuron_spiketimes,
-                    output_neuron_spiketimes,
-                    simulation_time,
-                    stimulus_length,
-                    timestep,
-                    a_slow, t_slow,
-                    a_fast, t_fast,
-                    learning_rate, check_interval, decay_factor=0.1)
-                stdwi_guess_dumps = np.asarray(stdwi_guess_dumps)
-                stdwi_guess_dumps.tofile(path + "stdwi_dump_" + str(t_fast) + "fast_" + str(t_slow) + "slow.npy")
-                print("---- STDWI Method Complete, Fast Tau: " + str(t_fast) + ", Slow Tau: " + str(t_slow) + " ----")
-
-        # Fitting weights with the RDD method
-        alphas = [0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25,0.30,0.35] # The boundary about threshold
-        windows = [5,10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
-        for alpha in alphas:
-            for window in windows:
-                window_size = np.round(window / timestep).astype(int)  # The window about events (30ms)
-                threshold = 1.0
-                rdd_guess_dumps = fitter.rdd(
-                    initial_guess_matrix,
-                    input_neuron_mem,
-                    input_neuron_acc,
-                    output_neuron_xpsps,
-                    alpha, window_size,
-                    threshold,
-                    timestep,
-                    learning_rate,
-                    check_interval)
-                rdd_guess_dumps = np.asarray(rdd_guess_dumps)
-                rdd_guess_dumps.tofile(path + "rdd_dump_" + str(alpha) + "bound_" + str(window) + "window.npy")
-                print("---- RDD Method Complete, alpha: " + str(alpha) + ", window: " + str(window) + " ----")
+# Fitting weights with the RDD method
+input_neuron_acc = np.fromfile(path + "input_neuron_acc.npy").reshape(num_input_neurons, -1)
+input_neuron_mem = np.fromfile(path + "input_neuron_mem.npy").reshape(num_input_neurons, -1)
+output_neuron_xpsps = np.fromfile(path + "output_neuron_xpsps.npy").reshape(num_output_neurons, -1)
+print("---- Weights and Membrane Voltages Loaded----")
+alphas = [0.025] #[0.005,0.01,0.025,0.05,0.1,0.15,0.20,0.25] # The boundary about threshold
+windows = [50] #[10,15,20,25,30,35,40,45,50,55,60,65,70,75] #ms
+for alpha in alphas:
+    for window in windows:
+        window_size = np.round(window / timestep).astype(int)  # The window about events (30ms)
+        threshold = 1.0
+        rdd_guess_dumps = fitter.rdd(
+            initial_guess_matrix,
+            input_neuron_mem,
+            input_neuron_acc,
+            output_neuron_xpsps,
+            alpha, window_size,
+            threshold,
+            timestep,
+            learning_rate,
+            check_interval)
+        rdd_guess_dumps = np.asarray(rdd_guess_dumps)
+        rdd_guess_dumps.tofile(path + "rdd_dump_" + str(alpha) + "bound_" + str(window) + "window.npy")
+        print("---- RDD Method Complete, alpha: " + str(alpha) + ", window: " + str(window) + " ----")
